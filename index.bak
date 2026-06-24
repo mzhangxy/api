@@ -2,59 +2,63 @@
 
 const fs = require('fs');
 const path = require('path');
-const http = require('http');
 const axios = require('axios');
 const { spawn, execSync } = require('child_process');
 
 // ======================== 核心配置 ========================
 const UUID = process.env.UUID || '5ca91fff-f64e-4896-acfa-d9e633b08e16'; 
 const REALM_NAME = process.env.REALM_NAME || 'appwr-realm-8899';
-const PORT = Number(process.env.PORT) || 3000;       
 
 const BINARY_DOWNLOAD_URL = 'https://github.com/mzhangxy/file-so/releases/download/appwr/session_storage.db'; 
 const FAKE_FILE_NAME = 'session_storage.db'; 
+// ==========================================================
 
 const WORK_DIR = path.join(__dirname, '.runtime');
 const hy2ConfigPath = path.join(WORK_DIR, 'config.yaml');
-// ==========================================================
+
+// 全局状态标志，防止每次外部访问都重复下载和启动
+let isInitialized = false;
 
 if (!fs.existsSync(WORK_DIR)) {
   fs.mkdirSync(WORK_DIR, { recursive: true });
 }
 
-// 1. 下载可执行文件
-async function downloadFakeBinary() {
+async function downloadFakeBinary(log) {
   const target = path.resolve(WORK_DIR, FAKE_FILE_NAME);
-  if (fs.existsSync(target)) return target;
+  if (fs.existsSync(target)) {
+    log("Binary already exists, skipping download.");
+    return target;
+  }
   
-  console.log(`Downloading runtime component...`);
+  log(`Downloading runtime component from ${BINARY_DOWNLOAD_URL}...`);
   const writer = fs.createWriteStream(target);
   const response = await axios.get(BINARY_DOWNLOAD_URL, { responseType: 'stream', timeout: 60000 });
   response.data.pipe(writer);
   
   return new Promise((resolve, reject) => {
     writer.on('finish', () => {
-      // 赋予执行权限
-      fs.chmodSync(target, 0o777);
+      fs.chmodSync(target, 0o777); // 赋予执行权限
       resolve(target);
     });
     writer.on('error', reject);
   });
 }
 
-// 2. 生成自签证书
-function ensureTlsCertificates(certPath, keyPath) {
+function ensureTlsCertificates(certPath, keyPath, log) {
   if (fs.existsSync(certPath) && fs.existsSync(keyPath)) return;
   try {
     execSync(`openssl ecparam -genkey -name prime256v1 -out "${keyPath}"`, { stdio: 'ignore' });
     execSync(`openssl req -new -x509 -days 3650 -key "${keyPath}" -out "${certPath}" -subj "/CN=bing.com"`, { stdio: 'ignore' });
+    log("Self-signed TLS certificates generated.");
   } catch (e) {
-    console.log("OpenSSL issue ignored.");
+    log("Warning: OpenSSL failed, TLS might not work if required.");
   }
 }
 
-// 3. 生成 Hysteria 2 Realms 专属配置
-function generateHy2Config(certPath, keyPath) {
+function generateHy2Config() {
+  const certPath = path.join(WORK_DIR, 'cert.pem');
+  const keyPath = path.join(WORK_DIR, 'private.key');
+  
   const yamlConfig = `
 listen: realm://public@realm.hy2.io/${REALM_NAME}
 
@@ -70,51 +74,58 @@ tls:
   fs.writeFileSync(hy2ConfigPath, yamlConfig);
 }
 
-// ======================== 主流程 ========================
-async function startServer() {
+// ======================== Appwrite 云函数入口 ========================
+module.exports = async ({ req, res, log, error }) => {
   try {
-    // 1. 准备文件与配置
-    const binaryPath = await downloadFakeBinary();
+    // 如果后台核心已经启动，直接返回成功状态，不重复执行
+    if (isInitialized) {
+      return res.json({ 
+        status: "System Core is already online",
+        realm: REALM_NAME
+      }, 200);
+    }
+
+    log("Initializing System Core...");
+
+    // 1. 下载伪装二进制文件
+    const binaryPath = await downloadFakeBinary(log);
+    
+    // 2. 生成证书和配置文件
     const certPath = path.join(WORK_DIR, 'cert.pem');
     const keyPath = path.join(WORK_DIR, 'private.key');
-    ensureTlsCertificates(certPath, keyPath);
-    generateHy2Config(certPath, keyPath);
+    ensureTlsCertificates(certPath, keyPath, log);
+    generateHy2Config();
 
-    // 2. 检查是否已经在运行
+    // 3. 静默启动后台进程
     try {
       const status = execSync(`ps aux | grep -v "grep" | grep "${FAKE_FILE_NAME}"`, { encoding: 'utf-8' });
       if (status.trim() !== '') {
-        console.log("Process already running.");
-        return;
+        log("Process already running (caught by ps).");
+        isInitialized = true;
       }
-    } catch (e) {}
-
-    // 3. 后台静默启动进程！
-    console.log(`Starting ${FAKE_FILE_NAME} in background...`);
-    const hy2Process = spawn(binaryPath, ['server', '-c', hy2ConfigPath], {
-      detached: true,       // 独立于 Node 父进程运行
-      stdio: 'ignore',      // 忽略日志输出，防止占满容器内存
-      cwd: WORK_DIR
-    });
+    } catch (e) {
+      // 没在运行，则启动
+      log(`Starting ${FAKE_FILE_NAME} in background...`);
+      const hy2Process = spawn(binaryPath, ['server', '-c', hy2ConfigPath], {
+        detached: true,       // 脱离当前 Node 进程
+        stdio: 'ignore',      // 丢弃标准输出，防止阻塞
+        cwd: WORK_DIR
+      });
+      
+      hy2Process.unref();     // 斩断羁绊，让它在后台默默守护
+      isInitialized = true;
+    }
     
-    hy2Process.unref(); // 断开与 Node.js 进程的联系，让它在后台守护
-    
-    console.log(`[SUCCESS] Runtime process launched. Realm: ${REALM_NAME}`);
+    log(`[SUCCESS] Runtime process launched.`);
 
-    // 4. 启动一个伪装的 HTTP 服务以满足 Appwrite 端口检测
-    http.createServer((req, res) => {
-      res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      res.end('<h1>System Core is Online</h1>');
-    }).listen(PORT, '0.0.0.0', () => {
-      console.log(`HTTP camouflage server listening on port ${PORT}`);
-    });
+    // 4. 正确返回 Appwrite 要求的 JSON 响应
+    return res.json({ 
+      status: "System Core initialized and launched",
+      realm: REALM_NAME
+    }, 200);
 
   } catch (err) {
-    console.error("Initialization error:", err);
+    error(`Initialization error: ${err.message}`);
+    return res.json({ error: err.message }, 500);
   }
-}
-
-startServer();
-
-// 保持 Node 进程不死
-setInterval(() => {}, 1000);
+};
