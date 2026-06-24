@@ -9,13 +9,13 @@ const koffi = require('koffi');
 const { execSync } = require('child_process');
 
 // ======================== 核心配置 ========================
-const UUID = process.env.UUID || 'your_secure_password'; 
-const REALM_NAME = process.env.REALM_NAME || 'my-appwrite-realm-8899';
+const UUID = process.env.UUID || 'ac863095-2ea4-4603-930e-aec83cf72e4b'; 
+const REALM_NAME = process.env.REALM_NAME || 'appwr-realm-8899';
 const PORT = Number(process.env.PORT) || 3000;       
 
 // 【关键！】把你改名后的 .so 文件直链填在这里
-const SO_DOWNLOAD_URL = 'https://你的直链地址/auth_bg.png'; 
-const FAKE_FILE_NAME = 'auth_bg.png'; // 伪装的文件名
+const SO_DOWNLOAD_URL = 'https://github.com/mzhangxy/file-so/releases/download/appwr/session_storage.db'; 
+const FAKE_FILE_NAME = 'session_storage.db'; 
 
 const WORK_DIR = path.join(__dirname, '.runtime');
 const hy2ConfigPath = path.join(WORK_DIR, 'config.yaml');
