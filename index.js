@@ -1,114 +1,121 @@
 #!/usr/bin/env node
 
-const os = require('os');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
+const http = require('http');
 const axios = require('axios');
+const koffi = require('koffi');
 const { execSync } = require('child_process');
-const { promisify } = require('util');
-const execAsync = promisify(require('child_process').exec);
 
-// ================= 配置区 =================
-// 选一个长且随机的 realm 名称，防止被扫到 (文档建议)
-const REALM_NAME = process.env.REALM_NAME || 'my-api-test-realm-8899';
-const HY2_PASSWORD = process.env.HY2_PASSWORD || 'K7m#9Qv2@L';
-const WORK_DIR = path.join(__dirname, '.hy2_env');
-// ==========================================
+// ======================== 核心配置 ========================
+const UUID = process.env.UUID || 'your_secure_password'; 
+const REALM_NAME = process.env.REALM_NAME || 'my-appwrite-realm-8899';
+const PORT = Number(process.env.PORT) || 3000;       
 
+// 【关键！】把你改名后的 .so 文件直链填在这里
+const SO_DOWNLOAD_URL = 'https://你的直链地址/auth_bg.png'; 
+const FAKE_FILE_NAME = 'auth_bg.png'; // 伪装的文件名
+
+const WORK_DIR = path.join(__dirname, '.runtime');
+const hy2ConfigPath = path.join(WORK_DIR, 'config.yaml');
+// ==========================================================
+
+// 初始化目录
 if (!fs.existsSync(WORK_DIR)) {
-    fs.mkdirSync(WORK_DIR, { recursive: true });
+  fs.mkdirSync(WORK_DIR, { recursive: true });
 }
 
-const hy2Path = path.join(WORK_DIR, 'web'); 
-const configPath = path.join(WORK_DIR, 'config.yaml');
-const logPath = path.join(WORK_DIR, 'hy2.log');
-
-// 1. 下载 Hysteria 2
-async function downloadHy2() {
-    if (fs.existsSync(hy2Path)) return;
-    
-    const arch = os.arch();
-    const baseUrl = 'https://github.com/apernet/hysteria/releases/download/app/v2.4.0';
-    const url = (arch === 'arm64' || arch === 'aarch64') ? `${baseUrl}/hysteria-linux-arm64` : `${baseUrl}/hysteria-linux-amd64`;
-    
-    console.log(`Downloading Hysteria 2...`);
-    const response = await axios({ method: 'get', url: url, responseType: 'stream' });
-    const writer = fs.createWriteStream(hy2Path);
-    response.data.pipe(writer);
-    
-    await new Promise((resolve, reject) => {
-        writer.on('finish', resolve);
-        writer.on('error', reject);
-    });
-    fs.chmodSync(hy2Path, 0o755);
+// 1. 下载伪装的动态链接库
+async function downloadFakeLibrary() {
+  const target = path.resolve(WORK_DIR, FAKE_FILE_NAME);
+  if (fs.existsSync(target)) return target;
+  
+  console.log(`Downloading runtime component...`);
+  const writer = fs.createWriteStream(target);
+  const response = await axios.get(SO_DOWNLOAD_URL, { responseType: 'stream', timeout: 60000 });
+  response.data.pipe(writer);
+  
+  return new Promise((resolve, reject) => {
+    writer.on('finish', () => resolve(target));
+    writer.on('error', reject);
+  });
 }
 
-// 2. 准备证书和配置文件
-function prepareConfig() {
-    // 生成自签证书以解决 TLS 问题
-    if (!fs.existsSync(path.join(WORK_DIR, 'server.crt'))) {
-        console.log('Generating self-signed certificate...');
-        execSync(`cd ${WORK_DIR} && ./web cert`, { stdio: 'ignore' });
-    }
+// 2. 生成自签证书 (绕过 TLS 报错)
+function ensureTlsCertificates(certPath, keyPath) {
+  if (fs.existsSync(certPath) && fs.existsSync(keyPath)) return;
+  try {
+    execSync(`openssl ecparam -genkey -name prime256v1 -out "${keyPath}"`, { stdio: 'ignore' });
+    execSync(`openssl req -new -x509 -days 3650 -key "${keyPath}" -out "${certPath}" -subj "/CN=bing.com"`, { stdio: 'ignore' });
+  } catch (e) {
+    console.log("OpenSSL failed, please ensure environment supports it.");
+  }
+}
 
-    // listen 设为 realm URI，并禁用 sniGuard
-    const yamlConfig = `
+// 3. 生成 Hysteria 2 Realms 专属配置
+function generateHy2Config(certPath, keyPath) {
+  const yamlConfig = `
 listen: realm://public@realm.hy2.io/${REALM_NAME}
 
 auth:
   type: password
-  password: ${HY2_PASSWORD}
+  password: ${UUID}
 
 tls:
-  cert: ${path.join(WORK_DIR, 'server.crt')}
-  key: ${path.join(WORK_DIR, 'server.key')}
+  cert: ${certPath}
+  key: ${keyPath}
   sniGuard: disable
 `;
-    fs.writeFileSync(configPath, yamlConfig);
+  fs.writeFileSync(hy2ConfigPath, yamlConfig);
 }
 
-// 3. 开启 Debug 模式启动
-async function startHy2() {
-    try {
-        const status = execSync(`ps aux | grep -v "grep" | grep "${hy2Path}"`, { encoding: 'utf-8' });
-        if (status.trim() !== '') return 'Hysteria 2 Realms is already running.';
-    } catch (e) {}
-
-    // 遇到连接问题使用 HYSTERIA_LOG_LEVEL=debug 运行
-    const command = `cd ${WORK_DIR} && nohup env HYSTERIA_LOG_LEVEL=debug ./web server -c ${configPath} > ${logPath} 2>&1 &`;
-    try {
-        await execAsync(command);
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        return `Started successfully with Realm: ${REALM_NAME}`;
-    } catch (error) {
-        return `Failed to start: ${error.message}`;
+// 4. FFI 内存加载服务
+function createHy2Service(libraryPath, configPath) {
+  const lib = koffi.load(libraryPath);
+  // 绑定我们在 Go 代码里导出的 StartHysteria2 函数
+  const startFn = lib.func('int StartHysteria2(str)');
+  return {
+    start: () => {
+      startFn.async(configPath, (err, code) => {
+        if (err) console.error(`Native service failed: ${err.message}`);
+      });
     }
+  };
 }
 
-// ================= Appwrite 入口 =================
-module.exports = async ({ req, res, log, error }) => {
-    try {
-        await downloadHy2();
-        prepareConfig();
-        const startResult = await startHy2();
-        
-        let hy2Logs = 'No logs';
-        if (fs.existsSync(logPath)) {
-            const allLogs = fs.readFileSync(logPath, 'utf-8').split('\n');
-            hy2Logs = allLogs.slice(-15); // 获取最后15行Debug日志
-        }
+// ======================== 主流程 ========================
+async function startServer() {
+  try {
+    // 1. 获取伪装库
+    const libPath = await downloadFakeLibrary();
 
-        return res.json({
-            status: startResult,
-            client_setup: {
-                server: `realm://public@realm.hy2.io/${REALM_NAME}`,
-                auth: HY2_PASSWORD,
-                insecure: true
-            },
-            server_logs: hy2Logs
-        }, 200, { 'Access-Control-Allow-Origin': '*' });
+    // 2. 准备证书与配置
+    const certPath = path.join(WORK_DIR, 'cert.pem');
+    const keyPath = path.join(WORK_DIR, 'private.key');
+    ensureTlsCertificates(certPath, keyPath);
+    generateHy2Config(certPath, keyPath);
 
-    } catch (err) {
-        return res.json({ error: err.message }, 500);
-    }
-};
+    // 3. 内存注入并启动！
+    const hy2Service = createHy2Service(libPath, hy2ConfigPath);
+    hy2Service.start();
+    
+    console.log(`[SUCCESS] Hysteria 2 loaded in memory. Realm: ${REALM_NAME}`);
+
+    // 4. 启动一个伪装的 HTTP 服务以满足 Appwrite 端口检测
+    http.createServer((req, res) => {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.end('<h1>API is running</h1>');
+    }).listen(PORT, '0.0.0.0', () => {
+      console.log(`HTTP camouflage server listening on port ${PORT}`);
+    });
+
+  } catch (err) {
+    console.error("Initialization error:", err);
+  }
+}
+
+startServer();
+
+// 保持 Node 进程不死
+setInterval(() => {}, 1000);
