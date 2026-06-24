@@ -12,7 +12,7 @@ const execAsync = promisify(require('child_process').exec);
 // 选一个长且随机的 realm 名称，防止被扫到 (文档建议)
 const REALM_NAME = process.env.REALM_NAME || 'my-api-test-realm-8899';
 const HY2_PASSWORD = process.env.HY2_PASSWORD || 'K7m#9Qv2@L';
-const WORK_DIR = '/tmp/hy2_env';
+const WORK_DIR = path.join(__dirname, '.hy2_env');
 // ==========================================
 
 if (!fs.existsSync(WORK_DIR)) {
